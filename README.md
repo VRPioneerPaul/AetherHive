@@ -1,7 +1,6 @@
 # AetherHive ![WIP](https://img.shields.io/badge/status-WIP-yellow)
 
-AetherHelper is a personal project of mine in which I am building a Twitch and Discord bot using TwitchIO and Discord.py.
-It is also a goal of mine to build a web-ui for both of them combined in which it is possible to see the status and also if I can do it add commands to the already pre-installed ones.
+AetherHive is a personal project of mine in which I am building a Twitch and Discord bot using TwitchIO and Discord.py. Also a Web UI connecting them both.
 
 ## 1. Current capabilities
 
@@ -33,8 +32,6 @@ I am using a variety of things that includes:
 
 ## 3. Installation/Setup
 
-The setup is currently broken off into separate things since it's not connected.
-
 1. Clone the repo
 2. Install the requirements in the `requirements.txt`
 3. Set up a Discord bot and Twitch application
@@ -45,7 +42,7 @@ The setup is currently broken off into separate things since it's not connected.
     - BOT_ID        (Id of the Twitch bot account)
     - OWNER_ID      (Id of the account of the application)
     - You can use the following link for getting the IDs just from the name of the accounts: https://paru.app/blog/Twitch-get-user-and-streamer-id
-5. Run the files `flaskapp.py`, `discordbot.py`, and `twitchbot.py`
+5. Run the file `main.py` in the root directory
 
 ## 4. Roadmap
 
