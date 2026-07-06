@@ -44,7 +44,7 @@ The setup is currently broken off into separate things since it's not connected.
     - CLIENT_SECRET (Twitch application secret)
     - BOT_ID        (Id of the Twitch bot account)
     - OWNER_ID      (Id of the account of the application)
-    (You can use the following link for getting the IDs just from the name of the accounts: https://paru.app/blog/Twitch-get-user-and-streamer-id)
+    - You can use the following link for getting the IDs just from the name of the accounts: https://paru.app/blog/Twitch-get-user-and-streamer-id
 5. Run the files `flaskapp.py`, `discordbot.py`, and `twitchbot.py`
 
 ## 4. Roadmap
