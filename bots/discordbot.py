@@ -18,8 +18,6 @@ class AEH(discord.Client):
         LOGGER.warning("Disconnected from Discord")
         state.discord_online = False
 
-
-
 intents = discord.Intents.default()
 intents.message_content = True
 client = AEH(intents=intents)
