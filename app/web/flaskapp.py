@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, render_template
-from .api.main import health
 
 app = Flask(__name__)
 
@@ -11,7 +10,12 @@ def index():
 @app.route('/status')
 def status():
     print('Returning status')
-    return jsonify(health)
+    return jsonify()
+
+@app.route('/about')
+def about():
+    print('Rendering about.html')
+    return "About page"
 
 if __name__ == '__main__':
     print('Starting Flask app')

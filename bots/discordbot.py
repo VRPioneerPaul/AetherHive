@@ -1,8 +1,5 @@
 import discord
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from config.settings import setting
 
 class AEH(discord.Client):
     async def on_ready(self):
@@ -23,4 +20,8 @@ tree = discord.app_commands.CommandTree(client)
 async def hello(interaction: discord.Interaction):
     await interaction.response.send_message(f'Hello {interaction.user.display_name}!')
 
-client.run(os.getenv('DISCORD_TOKEN'))
+def start():
+    client.run(setting.DISCORD_TOKEN)
+
+if __name__ == "__main__":
+    start()

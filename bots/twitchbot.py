@@ -2,15 +2,11 @@ import asyncio
 import logging
 import random
 from typing import TYPE_CHECKING
-import os
-from dotenv import load_dotenv
 import asqlite
-
+from config.settings import setting
 import twitchio
 from twitchio import eventsub
 from twitchio.ext import commands
-
-load_dotenv()
 
 if TYPE_CHECKING:
     import sqlite3
@@ -19,10 +15,10 @@ if TYPE_CHECKING:
 LOGGER: logging.Logger = logging.getLogger("Bot")
 
 
-CLIENT_ID = os.getenv('CLIENT_ID')
-CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-BOT_ID = os.getenv('BOT_ID') 
-OWNER_ID = os.getenv('OWNER_ID') 
+CLIENT_ID = setting.CLIENT_ID
+CLIENT_SECRET = setting.CLIENT_SECRET
+BOT_ID = setting.BOT_ID
+OWNER_ID = setting.OWNER_ID 
 
 
 class Bot(commands.AutoBot):

@@ -1,6 +1,7 @@
 flask
 discord.py
-dotenv
+python-dotenv
 twitchio
 asqlite
 fastapi
+uvicorn

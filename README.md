@@ -1,4 +1,4 @@
-# AetherHelper WIP ![WIP](https://img.shields.io/badge/status-WIP-yellow)
+# AetherHive ![WIP](https://img.shields.io/badge/status-WIP-yellow)
 
 AetherHelper is a personal project of mine in which I am building a Twitch and Discord bot using TwitchIO and Discord.py.
 It is also a goal of mine to build a web-ui for both of them combined in which it is possible to see the status and also if I can do it add commands to the already pre-installed ones.
