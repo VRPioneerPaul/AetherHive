@@ -4,4 +4,5 @@ python-dotenv
 twitchio
 asqlite
 fastapi
+fastapi[standard]
 uvicorn

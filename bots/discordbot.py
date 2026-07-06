@@ -1,13 +1,22 @@
 import discord
 from config.settings import setting
+from app.state import state
+import logging
+
+LOGGER: logging.Logger = logging.getLogger("Bot_DC")
 
 class AEH(discord.Client):
     async def on_ready(self):
-        print(f'Logged on as {self.user}!')
+        LOGGER.info(f'Logged in as {self.user} (ID: {self.user.id})')
         await tree.sync()
+        state.discord_online = True
 
     async def on_message(self, message):
-        print(f'Message from {message.author}: {message.content}')
+        LOGGER.info(f'Message from {message.author}: {message.content}')
+
+    async def on_disconnect(self):
+        LOGGER.warning("Disconnected from Discord")
+        state.discord_online = False
 
 
 

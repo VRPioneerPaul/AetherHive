@@ -1,22 +1,25 @@
 from flask import Flask, jsonify, render_template
+import logging
+
+LOGGER: logging.Logger = logging.getLogger("FlaskApp")
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    print('Rendering index.html')
+    LOGGER.info('Rendering index.html')
     return render_template('index.html')
 
 @app.route('/status')
 def status():
-    print('Returning status')
+    LOGGER.info('Returning status JSON')
     return jsonify()
 
 @app.route('/about')
 def about():
-    print('Rendering about.html')
+    LOGGER.info('Rendering about page')
     return "About page"
 
 if __name__ == '__main__':
-    print('Starting Flask app')
+    LOGGER.info('Starting Flask app')
     app.run(debug=False, use_reloader=True)

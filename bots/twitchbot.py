@@ -7,12 +7,13 @@ from config.settings import setting
 import twitchio
 from twitchio import eventsub
 from twitchio.ext import commands
+from app.state import state
 
 if TYPE_CHECKING:
     import sqlite3
 
 
-LOGGER: logging.Logger = logging.getLogger("Bot")
+LOGGER: logging.Logger = logging.getLogger("Bot_TW")
 
 
 CLIENT_ID = setting.CLIENT_ID
@@ -44,14 +45,19 @@ class Bot(commands.AutoBot):
 
         if payload.user_id == self.bot_id:
             return
-
+        
         subs: list[eventsub.SubscriptionPayload] = [
             eventsub.ChatMessageSubscription(broadcaster_user_id=payload.user_id, user_id=self.bot_id),
+            eventsub.ChannelSubscribeSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelCheerSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelRaidSubscription(to_broadcaster_user_id=payload.user_id),
+            eventsub.ChannelPointsRedeemAddSubscription(broadcaster_user_id=payload.user_id),
+            eventsub.ChannelFollowSubscription(broadcaster_user_id=payload.user_id)
         ]
 
-        resp: twitchio.MultiSubscribePayload = await self.multi_subscribe(subs)
+        resp = await self.multi_subscribe(subs)
         if resp.errors:
-            LOGGER.warning("Failed to subscribe to: %r, for user: %s", resp.errors, payload.user_id)
+            LOGGER.info("EventSub result: %s", resp.errors)
 
     async def add_token(self, token: str, refresh: str) -> twitchio.authentication.ValidateTokenPayload:
         resp: twitchio.authentication.ValidateTokenPayload = await super().add_token(token, refresh)
@@ -73,9 +79,8 @@ class Bot(commands.AutoBot):
 
     async def event_ready(self) -> None:
         LOGGER.info("Successfully logged in as: %s", self.bot_id)
-
-#        await setup_eventsub(self)
-
+        state.twitch_online = True
+        LOGGER.info("Twitch bot is now online and ready to receive events.")
 
 class CommandLists(commands.Component):
 
@@ -84,7 +89,26 @@ class CommandLists(commands.Component):
 
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        print(f"[{payload.broadcaster.name}] - {payload.chatter.name}: {payload.text}")
+        LOGGER.info(f"Message from %s: %s", payload.chatter.name, payload.text)
+
+    @commands.Component.listener()
+    async def event_channel_raid(self, payload: twitchio.eventsub.ChannelRaidSubscription) -> None:
+        LOGGER.info(f"Raid from {payload.from_broadcaster_user_id} with {payload.viewers} viewers!")
+
+    @commands.Component.listener()
+    async def event_channel_subscribe(self, payload: twitchio.eventsub.ChannelSubscribeSubscription) -> None:
+        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just subscribed with a {payload.sub_plan} plan!")
+
+    @commands.Component.listener()
+    async def event_channel_cheer(self, payload: twitchio.eventsub.ChannelCheerSubscription) -> None:
+        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just cheered {payload.bits} bits!")
+
+    @commands.Component.listener()
+    async def event_custom_redemption_add(self, payload: twitchio.eventsub.ChannelPointsRedeemAddSubscription) -> None:
+        if payload.user_input:
+            LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just redeemed {payload.reward.title} with message: {payload.user_input}.")
+            return
+        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just redeemed {payload.reward.title}.")
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
@@ -127,33 +151,6 @@ class CommandLists(commands.Component):
     async def socials_twitch(self, ctx: commands.Context) -> None:
         await ctx.send("twitch.tv/aetherpioneer (You're already here!) twitch.tv/aetherhelper (The Bot Account)")
 
-async def setup_eventsub(self):
-    broadcaster_id = str(self.owner_id)
-
-    await self.subscribe_websocket(
-        payload=eventsub.ChannelSubscribeSubscription(
-            broadcaster_user_id=broadcaster_id
-        )
-    )
-
-    await self.subscribe_websocket(
-        payload=eventsub.ChannelCheerSubscription(
-            broadcaster_user_id=broadcaster_id
-        )
-    )
-
-    await self.subscribe_websocket(
-        payload=eventsub.ChannelRaidSubscription(
-            to_broadcaster_user_id=broadcaster_id
-        )
-    )
-
-    await self.subscribe_websocket(
-        payload=eventsub.ChannelPointsRedeemAddSubscription(
-            broadcaster_user_id=broadcaster_id
-        )
-    )
-
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
     query = """CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)"""
     async with db.acquire() as connection:
@@ -192,7 +189,8 @@ def main() -> None:
         asyncio.run(runner())
     except KeyboardInterrupt:
         LOGGER.warning("Shutting down due to KeyboardInterrupt")
-
+        state.twitch_online = False
+        LOGGER.info("Twitch bot is now offline.")
 
 if __name__ == "__main__":
     main()
