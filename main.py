@@ -4,11 +4,10 @@ from bots.twitchbot import main as twitch_main
 # import app.web.flaskapp
 
 import threading
-import time
-
-twitch_thread = threading.Thread(target=twitch_main, daemon=True)
 
 if __name__ == "__main__":
+    twitch_thread = threading.Thread(target=twitch_main, daemon=True)
+
     twitch_thread.start()
 
     discord_start()
