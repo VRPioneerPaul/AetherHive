@@ -1,0 +1,6 @@
+flask
+discord.py
+dotenv
+twitchio
+asqlite
+fastapi
