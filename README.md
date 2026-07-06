@@ -43,13 +43,14 @@ I am using a variety of things that includes:
     - OWNER_ID      (Id of the account of the application)
     - You can use the following link for getting the IDs just from the name of the accounts: https://paru.app/blog/Twitch-get-user-and-streamer-id
 5. Run the file `main.py` in the root directory
+6. On first run you'll need the permissions to your Twitch account (for viewing chat and events) so just log-in with this link: [OAuth Link](http://localhost:4343/oauth?scopes=user:read:chat%20user:write:chat%20user:bot%20channel:read:redemptions%20channel:manage:redemptions%20channel:read:subscriptions%20bits:read%20moderator:read:chatters%20moderator:read:followers%20channel:read:moderators%20channel:read:vips%20channel:read:goals%20channel:read:hype_train%20channel:read:polls%20channel:read:predictions&force_verify=true) after giving the Twitch application this redirect link: http://localhost:4343/oauth/callback
 
 ## 4. Roadmap
 
 - [x] basic Twitch bot
 - [x] basic Discord bot
 - [ ] combined Web UI (status and live log)
-- [ ] one file starts all
+- [x] one file starts all
 - [ ] advanced bot capabilities
 - [ ] advanced Web UI (ability to add commands and things from it)
 
