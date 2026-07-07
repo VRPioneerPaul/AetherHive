@@ -22,10 +22,20 @@ CLIENT_SECRET = setting.CLIENT_SECRET
 BOT_ID = setting.BOT_ID
 OWNER_ID = setting.OWNER_ID 
 
+def build_broadcaster_subs(broadcaster_id: str) -> list[eventsub.SubscriptionPayload]:
+    return [
+        eventsub.ChatMessageSubscription(broadcaster_user_id=broadcaster_id, user_id=BOT_ID),
+        eventsub.ChannelSubscribeSubscription(broadcaster_user_id=broadcaster_id),
+        eventsub.ChannelCheerSubscription(broadcaster_user_id=broadcaster_id),
+        eventsub.ChannelRaidSubscription(to_broadcaster_user_id=broadcaster_id),
+        eventsub.ChannelPointsRedeemAddSubscription(broadcaster_user_id=broadcaster_id),
+        eventsub.ChannelFollowSubscription(broadcaster_user_id=broadcaster_id, moderator_user_id=BOT_ID)
+    ]
 
 class Bot(commands.AutoBot):
     def __init__(self, *, token_database: asqlite.Pool, subs: list[eventsub.SubscriptionPayload]) -> None:
         self.token_database = token_database
+        self._pending_subs = subs
 
         super().__init__(
             client_id=CLIENT_ID,
@@ -38,6 +48,11 @@ class Bot(commands.AutoBot):
     async def setup_hook(self) -> None:
         await self.add_component(CommandLists(self))
 
+        if self._pending_subs:
+            resp = await self.multi_subscribe(self._pending_subs)
+            if resp.errors:
+                LOGGER.info("EventSub resub result: %s", resp.errors)
+
     async def event_oauth_authorized(self, payload: twitchio.authentication.UserTokenPayload) -> None:
         await self.add_token(payload.access_token, payload.refresh_token)
 
@@ -47,18 +62,11 @@ class Bot(commands.AutoBot):
         if payload.user_id == self.bot_id:
             return
         
-        subs: list[eventsub.SubscriptionPayload] = [
-            eventsub.ChatMessageSubscription(broadcaster_user_id=payload.user_id, user_id=self.bot_id),
-            eventsub.ChannelSubscribeSubscription(broadcaster_user_id=payload.user_id),
-            eventsub.ChannelCheerSubscription(broadcaster_user_id=payload.user_id),
-            eventsub.ChannelRaidSubscription(to_broadcaster_user_id=payload.user_id),
-            eventsub.ChannelPointsRedeemAddSubscription(broadcaster_user_id=payload.user_id),
-            eventsub.ChannelFollowSubscription(broadcaster_user_id=payload.user_id, moderator_user_id=BOT_ID)
-        ]
-
+        subs = build_broadcaster_subs(payload.user_id)
         resp = await self.multi_subscribe(subs)
-        if resp.errors:
-            LOGGER.info("EventSub result: %s", resp.errors)
+        if "409" in resp.errors:
+            return
+        LOGGER.info("EventSub result: %s", resp.errors)
 
     async def add_token(self, token: str, refresh: str) -> twitchio.authentication.ValidateTokenPayload:
         resp: twitchio.authentication.ValidateTokenPayload = await super().add_token(token, refresh)
@@ -81,7 +89,6 @@ class Bot(commands.AutoBot):
     async def event_ready(self) -> None:
         LOGGER.info("Successfully logged in as: %s", self.bot_id)
         state.twitch_online = True
-        LOGGER.info("Twitch bot is now online and ready to receive events.")
 
 class CommandLists(commands.Component):
 
@@ -90,8 +97,8 @@ class CommandLists(commands.Component):
 
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        LOGGER.info(f"Message from %s: %s", payload.chatter.name, payload.text)
-        twdata.latest_message = (f"{payload.chatter.name}: {payload.text}")
+        LOGGER.info(f"Message from [%s] - %s: %s", payload.broadcaster.name, payload.chatter.name, payload.text)
+        twdata.latest_message = (f"{payload.broadcaster.name} - {payload.chatter.name}: {payload.text}")
 
     @commands.Component.listener()
     async def event_raid(self, payload: twitchio.ChannelRaid) -> None:
@@ -160,21 +167,21 @@ class CommandLists(commands.Component):
         msg = f"with message: {message}" if message else ""
         await ctx.send(f"{ctx.chatter.mention} gave {amount} thanks to {user.mention} {msg}")
 
-    @commands.group(invoke_fallback=True)
-    async def socials(self, ctx: commands.Context) -> None:
-        await ctx.send("Available socials: !socials discord, !socials youtube, !socials twitch")
+    #@commands.group(invoke_fallback=True)
+    #async def socials(self, ctx: commands.Context) -> None:
+    #    await ctx.send("Available socials: !socials discord, !socials youtube, !socials twitch")
 
-    @socials.command(name="discord", aliases=["dc"])
-    async def socials_discord(self, ctx: commands.Context) -> None:
-        await ctx.send("discord.gg/invite/qXXPVv2xss (Aether Hub the Community Server)")
+    #@socials.command(name="discord", aliases=["dc"])
+    #async def socials_discord(self, ctx: commands.Context) -> None:
+    #    await ctx.send("discord.gg/invite/qXXPVv2xss (Aether Hub the Community Server)")
 
-    @socials.command(name="youtube", aliases=["yt"])
-    async def socials_youtube(self, ctx: commands.Context) -> None:
-        await ctx.send("youtube.com/@aetherpioneer")
+    #@socials.command(name="youtube", aliases=["yt"])
+    #async def socials_youtube(self, ctx: commands.Context) -> None:
+    #    await ctx.send("youtube.com/@%s", ctx.broadcaster.name)
 
-    @socials.command(name="twitch", aliases=["tw"])
-    async def socials_twitch(self, ctx: commands.Context) -> None:
-        await ctx.send("twitch.tv/aetherpioneer (You're already here!) twitch.tv/aetherhelper (The Bot Account)")
+    #@socials.command(name="twitch", aliases=["tw"])
+    #async def socials_twitch(self, ctx: commands.Context) -> None:
+    #    await ctx.send("twitch.tv/%s (You're already here!) twitch.tv/aetherhelper (The Bot Account)", ctx.broadcaster.name)
 
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
     query = """CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)"""
@@ -192,8 +199,7 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
             if row["user_id"] == BOT_ID:
                 continue
 
-            subs.extend([eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=BOT_ID),
-            ])
+            subs.extend(build_broadcaster_subs(row["user_id"]))
 
     return tokens, subs
 
