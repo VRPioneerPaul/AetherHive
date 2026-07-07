@@ -53,7 +53,7 @@ class Bot(commands.AutoBot):
             eventsub.ChannelCheerSubscription(broadcaster_user_id=payload.user_id),
             eventsub.ChannelRaidSubscription(to_broadcaster_user_id=payload.user_id),
             eventsub.ChannelPointsRedeemAddSubscription(broadcaster_user_id=payload.user_id),
-            eventsub.ChannelFollowSubscription(broadcaster_user_id=payload.user_id)
+            eventsub.ChannelFollowSubscription(broadcaster_user_id=payload.user_id, moderator_user_id=BOT_ID)
         ]
 
         resp = await self.multi_subscribe(subs)
@@ -90,8 +90,8 @@ class CommandLists(commands.Component):
 
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        LOGGER.info(f"Message from %s: %s", payload.chatter, payload.text)
-        twdata.latest_message = payload.chatter + ' : ' + payload.text
+        LOGGER.info(f"Message from %s: %s", payload.chatter.name, payload.text)
+        twdata.latest_message = (f"{payload.chatter.name}: {payload.text}")
 
     @commands.Component.listener()
     async def event_raid(self, payload: twitchio.ChannelRaid) -> None:
@@ -99,13 +99,13 @@ class CommandLists(commands.Component):
         twdata.latest_raid = (f"{payload.from_broadcaster} with {payload.viewer_count} Viewers!")
 
     @commands.Component.listener()
-    async def event_subscribtion(self, payload: twitchio.ChannelSubscribe) -> None:
+    async def event_subscription(self, payload: twitchio.ChannelSubscribe) -> None:
         if payload.gift:
             LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just got gifted a subscription with a {payload.tier} plan!")
-            twdata.latest_sub = payload.user + ': Tier ' + payload.tier + ' Gifted Sub'
+            twdata.latest_sub = (f"{payload.user}: Tier {payload.tier} Gifted Sub")
             return
         LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just subscribed with a {payload.tier} plan!")
-        twdata.latest_sub = payload.user + ': Tier ' + payload.tier + ' Sub'
+        twdata.latest_sub = (f"{payload.user}: Tier {payload.tier} Sub")
 
     @commands.Component.listener()
     async def event_follow(self, payload: twitchio.ChannelFollow) -> None:
@@ -124,14 +124,21 @@ class CommandLists(commands.Component):
     @commands.Component.listener()
     async def event_custom_redemption_add(self, payload: twitchio.ChannelPointsRedemptionAdd) -> None:
         if payload.user_input:
-            LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward} with message: {payload.user_input}.")
+            LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward.title} with message: {payload.user_input}.")
             return
-        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward}.")
+        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward.title}.")
+
+    def is_streamstaff():
+        def streamstaff(ctx: commands.Context) -> bool:
+            return  ctx.chatter.moderator
+        
+        return commands.guard(streamstaff)
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
-        await ctx.reply(f"Hi {ctx.chatter}!")
+        await ctx.reply(f"Hi {ctx.chatter.name}!")
 
+    @is_streamstaff()
     @commands.command()
     async def say(self, ctx: commands.Context, *, message: str) -> None:
         await ctx.send(message)
