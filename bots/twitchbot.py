@@ -96,7 +96,7 @@ class CommandLists(commands.Component):
     @commands.Component.listener()
     async def event_raid(self, payload: twitchio.ChannelRaid) -> None:
         LOGGER.info(f"Raid from {payload.from_broadcaster} with {payload.viewer_count} viewers!")
-        twdata.latest_raid = payload.from_broadcaster + ' with ' + payload.viewer_count + ' Viewers!'
+        twdata.latest_raid = (f"{payload.from_broadcaster} with {payload.viewer_count} Viewers!")
 
     @commands.Component.listener()
     async def event_subscribtion(self, payload: twitchio.ChannelSubscribe) -> None:
@@ -116,10 +116,10 @@ class CommandLists(commands.Component):
     async def event_cheer(self, payload: twitchio.ChannelCheer) -> None:
         if payload.anonymous:
             LOGGER.info(f"[{payload.broadcaster}] - Anonymous just cheered {payload.bits} bits!")
-            twdata.latest_cheer = 'Anonymous: ' + payload.bits + ' Bits'
+            twdata.latest_cheer = (f"Anonymous: {payload.bits} Bits")
             return
         LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just cheered {payload.bits} bits!")
-        twdata.latest_cheer = payload.user + ': ' + payload.bits + ' Bits'
+        twdata.latest_cheer = (f"{payload.user}: {payload.bits} Bits")
 
     @commands.Component.listener()
     async def event_custom_redemption_add(self, payload: twitchio.ChannelPointsRedemptionAdd) -> None:
