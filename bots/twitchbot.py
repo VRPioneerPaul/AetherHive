@@ -7,7 +7,8 @@ from config.settings import setting
 import twitchio
 from twitchio import eventsub
 from twitchio.ext import commands
-from app.state import state
+from app.api.state import state
+from app.api.datapoints import twdata
 
 if TYPE_CHECKING:
     import sqlite3
@@ -89,26 +90,43 @@ class CommandLists(commands.Component):
 
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        LOGGER.info(f"Message from %s: %s", payload.chatter.name, payload.text)
+        LOGGER.info(f"Message from %s: %s", payload.chatter, payload.text)
+        twdata.latest_message = payload.chatter + ' : ' + payload.text
 
     @commands.Component.listener()
-    async def event_channel_raid(self, payload: twitchio.eventsub.ChannelRaidSubscription) -> None:
-        LOGGER.info(f"Raid from {payload.from_broadcaster_user_id} with {payload.viewers} viewers!")
+    async def event_raid(self, payload: twitchio.ChannelRaid) -> None:
+        LOGGER.info(f"Raid from {payload.from_broadcaster} with {payload.viewer_count} viewers!")
+        twdata.latest_raid = payload.from_broadcaster + ' with ' + payload.viewer_count + ' Viewers!'
 
     @commands.Component.listener()
-    async def event_channel_subscribe(self, payload: twitchio.eventsub.ChannelSubscribeSubscription) -> None:
-        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just subscribed with a {payload.sub_plan} plan!")
-
-    @commands.Component.listener()
-    async def event_channel_cheer(self, payload: twitchio.eventsub.ChannelCheerSubscription) -> None:
-        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just cheered {payload.bits} bits!")
-
-    @commands.Component.listener()
-    async def event_custom_redemption_add(self, payload: twitchio.eventsub.ChannelPointsRedeemAddSubscription) -> None:
-        if payload.user_input:
-            LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just redeemed {payload.reward.title} with message: {payload.user_input}.")
+    async def event_subscribtion(self, payload: twitchio.ChannelSubscribe) -> None:
+        if payload.gift:
+            LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just got gifted a subscription with a {payload.tier} plan!")
+            twdata.latest_sub = payload.user + ': Tier ' + payload.tier + ' Gifted Sub'
             return
-        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.user.name} just redeemed {payload.reward.title}.")
+        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just subscribed with a {payload.tier} plan!")
+        twdata.latest_sub = payload.user + ': Tier ' + payload.tier + ' Sub'
+
+    @commands.Component.listener()
+    async def event_follow(self, payload: twitchio.ChannelFollow) -> None:
+        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just followed the channel!")
+        twdata.latest_follow = payload.user
+
+    @commands.Component.listener()
+    async def event_cheer(self, payload: twitchio.ChannelCheer) -> None:
+        if payload.anonymous:
+            LOGGER.info(f"[{payload.broadcaster}] - Anonymous just cheered {payload.bits} bits!")
+            twdata.latest_cheer = 'Anonymous: ' + payload.bits + ' Bits'
+            return
+        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just cheered {payload.bits} bits!")
+        twdata.latest_cheer = payload.user + ': ' + payload.bits + ' Bits'
+
+    @commands.Component.listener()
+    async def event_custom_redemption_add(self, payload: twitchio.ChannelPointsRedemptionAdd) -> None:
+        if payload.user_input:
+            LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward} with message: {payload.user_input}.")
+            return
+        LOGGER.info(f"[{payload.broadcaster}] - {payload.user} just redeemed {payload.reward}.")
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:

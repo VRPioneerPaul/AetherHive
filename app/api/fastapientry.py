@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.state import state 
+from app.api.state import state 
 
 app = FastAPI()
 

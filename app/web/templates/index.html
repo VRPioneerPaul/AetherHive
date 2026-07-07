@@ -1,17 +1,203 @@
 <!DOCTYPE html>
-<html>
+<!--
+  AetherHive Dashboard
+  ---------------------
+  Gedacht als statisches Template fuer eine Flask-WebUI, das Live-Daten
+  von einem separaten FastAPI-Backend bezieht.
+
+  Dateistruktur (alle drei Dateien im selben Ordner ablegen, z.B. static/):
+    dashboard.html
+    style.css
+    script.js
+
+  Flask-Einbindung Beispiel:
+    templates/dashboard.html  (oder direkt aus /static/ ausliefern)
+    static/style.css
+    static/script.js
+    In Flask-Templates dann z.B.:
+      <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+      <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+  FastAPI stellt die Daten bereit, z.B.
+      GET  http://localhost:8000/api/overview
+      GET  http://localhost:8000/api/discord
+      GET  http://localhost:8000/api/twitch
+      WS   ws://localhost:8000/ws   (Echtzeit-Updates)
+
+  Der Connect-Code fuer WebSocket / Fetch ist in script.js markiert mit
+  "// TODO FastAPI:" - dort einfach die echten Endpunkte eintragen.
+  Aktuell laeuft eine Simulation, damit das Layout sofort sichtbar ist.
+-->
+<html lang="de" data-theme="dark">
 <head>
-    <title>My Flask App</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AetherHive &middot; Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav>
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/about">About</a></li>
-        </ul>
-    </nav>
-    <h1>Hello from Flask!</h1>
-    <p>This is my first HTML page.</p>
-    <div></div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="mark">A</div>
+    <span>AetherHive
+
+    </span>
+  </div>
+  <div class="top-actions">
+    <div class="tally offline" id="tally">
+      <div class="dot"></div>
+      <span id="tally-label">Verbinde...</span>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Theme wechseln"></button>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="rail" id="rail">
+    <button class="active" data-section="overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="12" width="8" height="9" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
+      Übersicht
+    </button>
+    <button data-section="discord">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+      Discord
+    </button>
+    <button data-section="twitch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="13" rx="1.5"/><path d="M8 17v3M14 17v3"/></svg>
+      Twitch
+    </button>
+    <button data-section="logs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h9"/></svg>
+      Logs
+    </button>
+  </nav>
+
+  <main>
+
+    <!-- ============ OVERVIEW ============ -->
+    <section class="section active" id="sec-overview">
+      <div class="section-head">
+        <div>
+          <h1>Übersicht</h1>
+          <p>Lokale Instanz &middot; localhost:5000</p>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi">
+          <div class="label">Bot Status</div>
+          <div class="value mono" id="kpi-bot-status">--</div>
+          <div class="delta" id="kpi-bot-uptime">Uptime wird geladen</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Discord Server</div>
+          <div class="value mono" id="kpi-discord-members">--</div>
+          <div class="delta">Mitglieder</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Twitch Stream</div>
+          <div class="value mono" id="kpi-twitch-status">--</div>
+          <div class="delta">aktueller Status</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Letztes Update</div>
+          <div class="value mono" id="kpi-last-update">--:--:--</div>
+          <div class="delta">via WebSocket</div>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <h3>Aktivitaet <small>Platzhalter fuer Chart.js o.ae.</small></h3>
+          <div class="chart-placeholder">
+            Hier Chart einbinden, sobald deine FastAPI Zeitreihen-Daten liefert<br>
+            (z.B. Nachrichten/Min, Zuschauer-Verlauf)
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Live-Feed <small>WebSocket</small></h3>
+          <div class="console" id="console-mini"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DISCORD ============ -->
+    <section class="section" id="sec-discord">
+      <div class="section-head">
+        <div>
+          <h1>Discord <span class="badge-tag badge-discord">Single Server</span></h1>
+          <p>Local-Host-Setup &ndash; kein Multi-Server-Management noetig</p>
+        </div>
+      </div>
+
+      <div class="identity-card">
+        <div class="avatar">DC</div>
+        <div>
+          <div class="name" id="discord-guild-name">Server wird geladen ...</div>
+          <div class="meta" id="discord-guild-meta">Mitglieder &middot; Rollen &middot; Kanaele</div>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <h3>Bot-Konfiguration</h3>
+          <div class="config-row"><span class="k">Prefix</span><span class="v" id="cfg-prefix">!</span></div>
+          <div class="config-row"><span class="k">Slash Commands</span><span class="v" id="cfg-slash">--</span></div>
+          <div class="config-row"><span class="k">Aktive Module</span><span class="v" id="cfg-modules">--</span></div>
+          <div class="config-row"><span class="k">Letzter Neustart</span><span class="v" id="cfg-restart">--</span></div>
+        </div>
+        <div class="panel">
+          <h3>Befehle heute <small>Top genutzt</small></h3>
+          <div class="chart-placeholder">
+            Balkendiagramm der meistgenutzten Commands<br>Quelle: FastAPI /api/discord/commands
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TWITCH ============ -->
+    <section class="section" id="sec-twitch">
+      <div class="section-head">
+        <div>
+          <h1>Twitch <span class="badge-tag badge-twitch">In Planung</span></h1>
+          <p>Layout-Platzhalter &ndash; wird angebunden, sobald Umfang feststeht</p>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <h3>Stream-Status</h3>
+          <div class="empty-state">
+            <strong>Noch keine Twitch-Daten verbunden</strong>
+            Hier erscheinen Live-Status, Titel und Kategorie, sobald die Twitch-API angebunden ist.
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Zuschauerverlauf</h3>
+          <div class="chart-placeholder">Platzhalter fuer Zuschauer-Chart</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOGS ============ -->
+    <section class="section" id="sec-logs">
+      <div class="section-head">
+        <div>
+          <h1>Aktivitaets-Log</h1>
+          <p>Rohe Ereignisse aus Discord- und Twitch-Handlern</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="console" id="console-full" style="height: 420px;"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>

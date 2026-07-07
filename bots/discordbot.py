@@ -1,6 +1,6 @@
 import discord
 from config.settings import setting
-from app.state import state
+from app.api.state import state
 import logging
 
 LOGGER: logging.Logger = logging.getLogger("Bot_DC")
